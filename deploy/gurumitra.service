@@ -1,0 +1,30 @@
+[Unit]
+Description=Guru-Mitra Voice Teaching Assistant (Django + Gunicorn)
+After=network.target
+
+[Service]
+Type=notify
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/AsstTeacher
+Environment=DJANGO_SETTINGS_MODULE=config.settings
+Environment=PYTHONUNBUFFERED=1
+# Creates /run/gurumitra (owned ubuntu:www-data, 0750) for the gunicorn socket.
+RuntimeDirectory=gurumitra
+RuntimeDirectoryMode=0750
+ExecStart=/home/ubuntu/AsstTeacher/.venv/bin/gunicorn \
+    -c /home/ubuntu/AsstTeacher/deploy/gunicorn.conf.py \
+    config.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=3
+KillMode=mixed
+TimeoutStopSec=30
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

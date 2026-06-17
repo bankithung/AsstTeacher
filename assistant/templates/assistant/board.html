@@ -1,0 +1,98 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guru-Mitra · Classroom Co-pilot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,800&family=Mukta:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'assistant/styles.css' %}" />
+</head>
+<body
+  data-llm="{{ llm_model }}"
+  data-stt="{{ stt_model }}"
+  data-tts-voice="{{ tts_voice }}"
+  data-key-configured="{{ key_configured|yesno:'1,0' }}">
+
+  <!-- Top rail (the classroom blackboard's chalk tray) -->
+  <header class="rail">
+    <div class="brand">
+      <span class="brand-mark"><i data-lucide="graduation-cap"></i></span>
+      <span class="brand-text">Guru&#8209;Mitra<small>Voice classroom co&#8209;pilot</small></span>
+    </div>
+
+    <div class="status" id="status" data-state="idle">
+      <span class="wave" aria-hidden="true"><b></b><b></b><b></b><b></b><b></b></span>
+      <span id="statusText">Ready</span>
+    </div>
+
+    <div class="rail-right">
+      <span class="chip"><i data-lucide="cpu"></i>{{ llm_model }}</span>
+      <span class="chip"><i data-lucide="ear"></i>{{ stt_model }}</span>
+      <span class="chip on-groq">Groq</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <main class="stage" id="stage"></main>
+
+    <aside class="convo" id="convo">
+      <div class="convo-head">
+        <span><i data-lucide="messages-square"></i> Conversation</span>
+        <button class="icon-btn" id="convoClear" title="Clear conversation"><i data-lucide="eraser"></i></button>
+      </div>
+      <div class="convo-log" id="convoLog"></div>
+    </aside>
+  </div>
+
+  <!-- Bottom console -->
+  <footer class="console">
+    <div class="modes" id="modes" role="group" aria-label="Mode">
+      <button class="mode" data-mode="auto" aria-pressed="true"><i data-lucide="sparkles"></i><span>Auto</span></button>
+      <button class="mode" data-mode="explain" aria-pressed="false"><i data-lucide="lightbulb"></i><span>Explain</span></button>
+      <button class="mode" data-mode="quiz" aria-pressed="false"><i data-lucide="list-checks"></i><span>Quiz</span></button>
+      <button class="mode" data-mode="dictation" aria-pressed="false"><i data-lucide="languages"></i><span>Dictation</span></button>
+      <button class="mode" data-mode="activity" aria-pressed="false"><i data-lucide="timer"></i><span>Activity</span></button>
+    </div>
+
+    <button class="mic" id="micBtn" title="Tap to speak (or press Space)">
+      <span class="mic-ring"><i data-lucide="mic" id="micIcon"></i></span>
+      <span id="micLabel">Tap to speak</span>
+    </button>
+
+    <div class="console-right">
+      <button class="ctrl" id="convoToggle" data-on="false" title="Continuous conversation mode">
+        <i data-lucide="audio-lines"></i><span>Conversation</span>
+      </button>
+      <button class="ctrl" id="voiceToggle" data-on="true" title="Speak responses aloud">
+        <i data-lucide="volume-2" id="voiceIcon"></i><span>Voice</span>
+      </button>
+      <label class="select" title="Assistant voice">
+        <i data-lucide="user-round"></i>
+        <select id="voiceSelect">
+          {% for v in tts_voices %}<option value="{{ v }}" {% if v == tts_voice %}selected{% endif %}>{{ v|title }}</option>{% endfor %}
+        </select>
+      </label>
+      <form class="type-row" id="typeForm">
+        <input type="text" id="textInput" autocomplete="off"
+               placeholder="…or type a command, e.g. “photosynthesis Hinglish me samjhao”" />
+        <button type="submit" class="send" title="Send"><i data-lucide="arrow-up"></i></button>
+      </form>
+    </div>
+  </footer>
+
+  <script>
+    window.GURU = {
+      transcribeUrl: "{% url 'api_transcribe' %}",
+      commandUrl: "{% url 'api_command' %}",
+      ttsUrl: "{% url 'api_tts' %}",
+      imageUrl: "{% url 'api_image' %}",
+      defaultVoice: "{{ tts_voice }}",
+    };
+  </script>
+  <script src="{% static 'assistant/vendor/lucide.min.js' %}"></script>
+  <script src="{% static 'assistant/app.js' %}"></script>
+</body>
+</html>
