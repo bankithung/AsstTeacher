@@ -108,9 +108,10 @@
           await playBlob(blob, gen);
           return;
         } catch (e) {
-          if (e && e.rateLimited) {            // daily quota exhausted -> browser voice
-            orpheusDownUntil = Date.now() + 5 * 60 * 1000;
-            console.warn("Orpheus out of quota — falling back to the browser voice.");
+          if (e && e.rateLimited) {            // rate-limited -> back off only as long as Groq says
+            const secs = Math.min(3600, Math.max(15, e.retryAfter || 60));
+            orpheusDownUntil = Date.now() + secs * 1000;
+            console.warn(`Orpheus rate-limited; browser voice for ~${secs}s, then back to Orpheus.`);
             break;
           }
           if (e && e.terms) break;             // not enabled -> browser voice
@@ -129,6 +130,7 @@
     if (!r.ok) {
       const err = new Error("tts failed");
       err.terms = r.status === 409; err.rateLimited = r.status === 429;
+      if (err.rateLimited) { try { err.retryAfter = (await r.json()).retry_after; } catch (e) {} }
       throw err;
     }
     return await r.blob();
@@ -222,7 +224,11 @@
     if (window.vad && window.vad.MicVAD) return;
     if (!vadLibPromise) vadLibPromise = (async () => {
       await loadScript("/vad/ort.min.js");
-      if (window.ort) window.ort.env.wasm.wasmPaths = "/vad/";
+      if (window.ort) {
+        window.ort.env.wasm.wasmPaths = "/vad/";
+        window.ort.env.logLevel = "error";          // silence harmless model-graph warnings
+        try { window.ort.env.wasm.numThreads = 1; } catch (e) {}
+      }
       await loadScript("/vad/bundle.min.js");
     })();
     await vadLibPromise;
@@ -483,7 +489,8 @@
     currentFeature = payload.feature;
     render(payload); icons();
     addBotTurn(payload);
-    if (payload.feature === "explain" && explainDeck) await autoplayFrom(0);
+    if (payload.feature === "explain" && explainDeck)
+      await speakLines(slideNarration(explainDeck.slides[0]));   // first chunk only; advance for more
     else await speakLines(narration(payload));
   }
 
@@ -533,7 +540,10 @@
     if (d.analogy) slides.push({ kind: "analogy", body: d.analogy });
     if (d.example) slides.push({ kind: "example", body: d.example });
     if (d.diagram && (d.diagram.nodes || []).length) slides.push({ kind: "diagram", diagram: d.diagram });
-    explainDeck = { slides, idx: 0, autoplay: true, title: p.title || "Concept", image: null, imageQuery: d.image_query || p.title || "" };
+    // Chunked narration: don't auto-play the whole deck (saves voice tokens +
+    // avoids rate limits). Narrate the current slide; teacher advances for more.
+    // The Play button still enables full hands-free auto-narration on demand.
+    explainDeck = { slides, idx: 0, autoplay: false, title: p.title || "Concept", image: null, imageQuery: d.image_query || p.title || "" };
     showSlide(0); fetchDeckImage();
   }
   function slideBody(s, deck) {

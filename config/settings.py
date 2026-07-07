@@ -50,6 +50,14 @@ CSRF_TRUSTED_ORIGINS = [
 # Groq AI configuration (https://console.groq.com/docs/overview)
 # ---------------------------------------------------------------------------
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+# Optional pool of extra keys for automatic failover on rate limits (429).
+# Comma-separated in GROQ_API_KEYS; the pool = GROQ_API_KEY + those (deduped).
+_extra_keys = os.environ.get('GROQ_API_KEYS', '')
+GROQ_API_KEYS = []
+for _k in [GROQ_API_KEY] + _extra_keys.split(','):
+    _k = _k.strip()
+    if _k and _k not in GROQ_API_KEYS:
+        GROQ_API_KEYS.append(_k)
 GROQ_BASE_URL = os.environ.get('GROQ_BASE_URL', 'https://api.groq.com/openai/v1')
 # Chat model used for explanations / quizzes / translation / activities.
 GROQ_LLM_MODEL = os.environ.get('GROQ_LLM_MODEL', 'qwen/qwen3-32b')

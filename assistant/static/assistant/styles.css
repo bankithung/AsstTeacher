@@ -44,7 +44,8 @@ body {
   color: var(--chalk);
   font-family: "Mukta", system-ui, "Noto Sans Devanagari", sans-serif;
   display: flex; flex-direction: column;
-  min-height: 100vh; overflow: hidden;
+  min-height: 100vh; min-height: 100dvh;   /* dvh keeps the console visible under mobile address bars */
+  height: 100dvh; overflow: hidden;
 }
 body::before {            /* faint chalk-dust / notebook dot grid */
   content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .35;
@@ -346,5 +347,60 @@ i[data-lucide] { width: 1em; height: 1em; stroke-width: 2; vertical-align: -0.12
 
 /* mic listening pulse ring */
 .mic.live .mic-ring { position: relative; }
+
+/* ====================== Mobile / phones & small tablets ====================== */
+@media (max-width: 768px) {
+  /* top rail compact */
+  .rail { gap: .6rem; padding: .5rem .8rem; }
+  .brand { gap: .5rem; }
+  .brand-mark { width: 2rem; height: 2rem; font-size: 1.1rem; border-radius: 10px; }
+  .brand-text { font-size: 1.1rem; }
+  .brand-text small { display: none; }
+  .status { margin-left: auto; padding: .35rem .65rem; gap: .45rem; font-size: .85rem; }
+  .rail-right { display: none; }                 /* drop model chips on small screens */
+
+  /* stage padding */
+  .stage { padding: 1rem .9rem; }
+
+  /* hero */
+  .hero { margin: .4rem auto; }
+  .hero h1 { margin: .4rem 0; }
+  .hero .lede { font-size: 1.02rem; }
+  .examples { gap: .7rem; margin-top: 1.1rem; }
+
+  /* ---- Console: 3 compact rows (flatten console-right with display:contents) ---- */
+  .console { align-items: stretch; gap: .5rem; padding: .5rem .6rem calc(.6rem + env(safe-area-inset-bottom)); }
+  .console-right { display: contents; }
+  .modes { order: 1; flex: 1 1 100%; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .modes::-webkit-scrollbar { display: none; }
+  .mode { flex: 0 0 auto; min-height: 42px; }
+  .mic { order: 2; flex: 1 1 auto; justify-content: center; min-height: 50px; padding: .45rem 1rem .45rem .5rem; }
+  #convoToggle { order: 3; } #voiceToggle { order: 4; }
+  #convoToggle, #voiceToggle { min-height: 50px; padding: .5rem .75rem; }
+  #convoToggle span, #voiceToggle span { display: none; }   /* icon-only toggles on mobile */
+  .select { display: none; }                      /* default voice on mobile (picker on desktop) */
+  .type-row { order: 5; flex: 1 1 100%; min-width: 0; }
+  .type-row input { font-size: 16px; min-height: 44px; }     /* 16px stops iOS zoom-on-focus */
+  .send { width: 46px; height: 46px; flex: 0 0 auto; }
+
+  /* feature cards a touch smaller */
+  .card-head h2 { font-size: 1.55rem; }
+  .deck-top { gap: .5rem; }
+  .deck-nav { gap: .4rem; }
+  .deck-nav .btn { padding: .55rem .7rem; }
+  .option { font-size: 1.12rem; padding: .85rem .95rem; }
+  .question { font-size: clamp(1.4rem, 6vw, 1.9rem); }
+  .s-big { font-size: clamp(1.9rem, 9vw, 2.6rem); }
+  .s-body { font-size: clamp(1.25rem, 5vw, 1.6rem); }
+  .timer { font-size: clamp(3rem, 17vw, 4.2rem); }
+  .act-grid, .dict-grid, .grid2 { gap: .9rem; }
+}
+
+/* extra-small phones */
+@media (max-width: 380px) {
+  .mode i { font-size: 1rem; }
+  .mic span { font-size: .98rem; }
+  .card-head h2 { font-size: 1.35rem; }
+}
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

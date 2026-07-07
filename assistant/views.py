@@ -7,11 +7,13 @@
 from __future__ import annotations
 
 import json
+import re
 
 import requests
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
@@ -22,10 +24,12 @@ from .groq_client import GroqError, TermsRequiredError, chat_json, synthesize, t
 TTS_VOICES = ["diana", "autumn", "hannah", "austin", "daniel", "troy"]
 
 
+@never_cache
 @ensure_csrf_cookie
 @require_GET
 def board(request):
-    """Render the smart-board page (sets the CSRF cookie for fetch calls)."""
+    """Render the smart-board page (always fresh so it references the latest
+    content-hashed CSS/JS; sets the CSRF cookie for fetch calls)."""
     return render(request, "assistant/board.html", {
         "llm_model": settings.GROQ_LLM_MODEL,
         "stt_model": settings.GROQ_STT_MODEL,
@@ -181,14 +185,27 @@ def api_tts(request):
         }, status=409)
     except GroqError as exc:
         msg = str(exc)
-        # Orpheus free tier is ~3600 tokens/DAY — when exhausted, signal the
-        # client to use the browser voice instead of going silent.
+        # Orpheus free tier has small per-minute AND per-day caps. Tell the client
+        # exactly how long to back off so it returns to Orpheus as soon as the
+        # window resets (a per-minute hit recovers in ~seconds, not minutes).
         if "429" in msg or "rate limit" in msg.lower():
-            return JsonResponse({"error": msg[:200], "rate_limited": True, "fallback": True}, status=429)
+            return JsonResponse({"error": msg[:200], "rate_limited": True, "fallback": True,
+                                 "retry_after": _retry_after_seconds(msg)}, status=429)
         return JsonResponse({"error": msg, "fallback": True}, status=502)
     resp = HttpResponse(audio, content_type="audio/wav")
     resp["Cache-Control"] = "no-store"
     return resp
+
+
+def _retry_after_seconds(msg, default=60):
+    """Parse Groq's 'try again in 17.02s' / '46m0s' / '1m30s' into seconds."""
+    m = re.search(r"try again in\s+([0-9hms.]+)", msg)
+    if not m:
+        return default
+    total = 0.0
+    for num, unit in re.findall(r"([0-9.]+)\s*([hms])", m.group(1)):
+        total += float(num) * {"h": 3600, "m": 60, "s": 1}[unit]
+    return round(total) or default
 
 
 # Simple in-memory cache for concept images (topic -> result dict).
